@@ -1,0 +1,2 @@
+{ services.getty.autologinUser = "root";
+}

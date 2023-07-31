@@ -1,39 +1,57 @@
-{
-  description = "nixos in prod";
+{ inputs = {
+    flake-utils.url = "github:numtide/flake-utils/v1.0.0";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
-    flake-utils.url = "github:numtide/flake-utils";
+    nixpkgs.url = "github:NixOS/nixpkgs/f1a49e20e1b4a7eeb43d73d60bae5be84a1e7610";
   };
 
-  outputs =
-    { self
-    , nixpkgs
-    , flake-utils
-    }:
+  outputs = { flake-utils, nixpkgs, ... }:
     flake-utils.lib.eachDefaultSystem (system:
-    let
-      # Get packages
-      pkgs = import nixpkgs {
-        inherit system;
-      };
+      let
+        pkgs = nixpkgs.legacyPackages."${system}";
 
-      # Create a shell to build the project with a given rust toolchain
-      create-shell = { }:
-        pkgs.mkShell ({
-          buildInputs = with pkgs;
-            [
-            ] ++ lib.optional (!stdenv.isDarwin) [
-              pkgs.sssd
-            ];
-        });
+        base = { lib, modulesPath, ... }: {
+          imports = [ "${modulesPath}/virtualisation/qemu-vm.nix" ];
 
-    in rec {
-      packages = {
-      };
+          # https://github.com/utmapp/UTM/issues/2353
+          networking.nameservers = lib.mkIf pkgs.stdenv.isDarwin [ "8.8.8.8" ];
 
-      devShells = {
-        default = create-shell { };
-      };
-    });
+          virtualisation = {
+            graphics = false;
+
+            host = { inherit pkgs; };
+          };
+        };
+
+        machine = nixpkgs.lib.nixosSystem {
+          system = builtins.replaceStrings [ "darwin" ] [ "linux" ] system;
+
+          modules = [ base ./module.nix ];
+        };
+
+        program = pkgs.writeShellScript "run-vm.sh" ''
+          export NIX_DISK_IMAGE=$(mktemp -u -t nixos.qcow2)
+
+          trap "rm -f $NIX_DISK_IMAGE" EXIT
+
+          ${machine.config.system.build.vm}/bin/run-nixos-vm
+        '';
+
+      in
+        { packages = { inherit machine; };
+
+          apps.default = {
+            type = "app";
+
+            program = "${program}";
+          };
+
+          devShells.default = pkgs.mkShell ({
+            buildInputs = with pkgs;
+              [
+              ] ++ lib.optional (!stdenv.isDarwin) [
+                pkgs.sssd
+              ];
+          });
+        }
+    );
 }
