@@ -20,6 +20,11 @@
           virtualisation = {
             graphics = false;
 
+            sharedDirectories.www = {
+              source = "$WWW";
+              target = "/var/www";
+            };
+
             host = { inherit pkgs; };
           };
         };

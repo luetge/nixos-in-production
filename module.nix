@@ -5,22 +5,7 @@
       enable = true;
       virtualHosts.localhost.locations."/" = {
         index = "index.html";
-        root = pkgs.writeTextDir "index.html" ''
-                   <html>
-                   <body>
-                   This server's firewall has the following open ports:
-          <ul>
-          ${let
-            renderPort = port: ''
-              <li>${toString port}</li>
-            '';
-
-          in lib.concatMapStrings renderPort
-          config.networking.firewall.allowedTCPPorts}
-                   </ul>
-                   </body>
-                   </html>
-        '';
+        root = "/var/www";
       };
     };
   };
