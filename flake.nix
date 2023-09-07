@@ -1,7 +1,9 @@
-{ inputs = {
+{
+  inputs = {
     flake-utils.url = "github:numtide/flake-utils/v1.0.0";
 
-    nixpkgs.url = "github:NixOS/nixpkgs/f1a49e20e1b4a7eeb43d73d60bae5be84a1e7610";
+    nixpkgs.url =
+      "github:NixOS/nixpkgs/f1a49e20e1b4a7eeb43d73d60bae5be84a1e7610";
   };
 
   outputs = { flake-utils, nixpkgs, ... }:
@@ -36,22 +38,18 @@
           ${machine.config.system.build.vm}/bin/run-nixos-vm
         '';
 
-      in
-        { packages = { inherit machine; };
+      in {
+        packages = { inherit machine; };
 
-          apps.default = {
-            type = "app";
+        apps.default = {
+          type = "app";
 
-            program = "${program}";
-          };
+          program = "${program}";
+        };
 
-          devShells.default = pkgs.mkShell ({
-            buildInputs = with pkgs;
-              [
-              ] ++ lib.optional (!stdenv.isDarwin) [
-                pkgs.sssd
-              ];
-          });
-        }
-    );
+        devShells.default = pkgs.mkShell ({
+          buildInputs = with pkgs;
+            [ nixfmt ] ++ lib.optional (!stdenv.isDarwin) [ pkgs.sssd ];
+        });
+      });
 }
